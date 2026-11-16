@@ -1,0 +1,10 @@
+node_modules/
+build/
+.DS_Store
+.env
+.env.*
+!.env.example
+connections.json*
+*.log
+*.zip
+*.tar.gz

@@ -1,0 +1,37 @@
+{
+  "mcpServers": {
+    "mysql-readonly": {
+      "command": "node",
+      "args": [
+        "./scripts/start.mjs"
+      ],
+      "cwd": ".",
+      "env_vars": [
+        "MYSQL_CONFIG_FILE",
+        "MYSQL_CONNECTIONS_JSON",
+        "MYSQL_DEFAULT_CONNECTION",
+        "MYSQL_URL",
+        "MYSQL_HOST",
+        "MYSQL_PORT",
+        "MYSQL_USER",
+        "MYSQL_PASSWORD",
+        "MYSQL_DATABASE",
+        "MYSQL_SSL",
+        "MYSQL_SSL_REJECT_UNAUTHORIZED",
+        "MYSQL_CONNECT_TIMEOUT_MS",
+        "MYSQL_QUERY_TIMEOUT_MS",
+        "MYSQL_MAX_ROWS",
+        "MYSQL_CONNECTION_LIMIT",
+        "MYSQL_POOL_QUEUE_LIMIT",
+        "MYSQL_MAX_PROFILES",
+        "MYSQL_MAX_CONCURRENT_QUERIES",
+        "MYSQL_MAX_QUEUED_QUERIES",
+        "MYSQL_QUEUE_TIMEOUT_MS",
+        "MYSQL_ACQUIRE_TIMEOUT_MS",
+        "MYSQL_MAX_CELL_BYTES",
+        "MYSQL_MAX_RESPONSE_BYTES"
+      ],
+      "tool_timeout_sec": 120
+    }
+  }
+}

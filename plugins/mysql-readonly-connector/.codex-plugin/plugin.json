@@ -1,0 +1,39 @@
+{
+  "name": "mysql-readonly-connector",
+  "version": "0.7.0-rc.1",
+  "description": "A multi-connection MySQL connector with read queries and transaction-guarded UPDATE review.",
+  "author": {
+    "name": "Zhang Hanlin"
+  },
+  "license": "MIT",
+  "keywords": [
+    "mysql",
+    "database",
+    "readonly",
+    "sql",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "MySQL Guarded Connector",
+    "shortDescription": "Query MySQL and run reviewed, bounded UPDATE operations.",
+    "longDescription": "通过本机配置窗口或 Codex 工具管理真实 MySQL 连接；密码保存在系统钥匙串中。支持只读查询与受控 UPDATE。",
+    "developerName": "Zhang Hanlin",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Database Query",
+      "Local Configuration",
+      "Guarded Update"
+    ],
+    "defaultPrompt": [
+      "打开 MySQL 连接配置窗口。",
+      "管理我的 MySQL 连接。",
+      "查看指定表的字段、类型和索引。",
+      "安全执行一条带 WHERE 的 UPDATE。"
+    ],
+    "brandColor": "#00758F"
+  },
+  "mcpServers": "./.mcp.json",
+  "requires_local_executor": true
+}

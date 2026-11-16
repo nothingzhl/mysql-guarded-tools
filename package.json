@@ -1,0 +1,11 @@
+{
+  "name": "mysql-guarded-tools-marketplace",
+  "version": "0.7.0-rc.1",
+  "private": true,
+  "scripts": {
+    "setup": "npm ci --ignore-scripts --prefix plugins/mysql-readonly-connector && npm run setup --prefix plugins/mysql-readonly-connector",
+    "test": "npm test --prefix plugins/mysql-readonly-connector",
+    "validate": "node scripts/validate-release.mjs",
+    "audit": "npm audit --omit=dev --prefix plugins/mysql-readonly-connector"
+  }
+}

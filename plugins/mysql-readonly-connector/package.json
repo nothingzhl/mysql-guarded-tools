@@ -1,0 +1,19 @@
+{
+  "name": "mysql-readonly-connector",
+  "version": "0.7.0-rc.1",
+  "private": true,
+  "type": "module",
+  "description": "MySQL MCP server with read queries and reviewed UPDATE operations",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "start": "node mcp/server.mjs",
+    "setup": "node scripts/setup.mjs"
+  },
+  "dependencies": {
+    "mysql2": "^3.14.4"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

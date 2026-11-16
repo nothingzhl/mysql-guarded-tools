@@ -1,0 +1,24 @@
+name: Validate plugin
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: [22, 24]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: plugins/mysql-readonly-connector/package-lock.json
+      - run: npm ci --ignore-scripts --prefix plugins/mysql-readonly-connector
+      - if: runner.os == 'macOS'
+        run: npm run setup --prefix plugins/mysql-readonly-connector
+      - run: npm test
+      - run: npm run validate
+      - run: npm run audit
