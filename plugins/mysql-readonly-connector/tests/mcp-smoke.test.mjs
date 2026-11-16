@@ -174,3 +174,12 @@ test("删除连接必须显式确认", async (context) => {
   assert.equal(deleted.result.isError, true);
   assert.match(deleted.result.content[0].text, /明确确认/);
 });
+
+test('MCP 保存入口拒绝密码字段和错误类型，不回显值', async context => {
+  const server=startServer();context.after(()=>server.cleanup());
+  const secret='not-a-real-password-fixture';
+  for(const [index,args] of [{name:'test',password:secret},{name:'test',allow_update:'true'},{name:'test',port:70000}].entries()){
+    const result=await server.request({jsonrpc:'2.0',id:index+1,method:'tools/call',params:{name:'mysql_save_connection',arguments:args}});
+    assert.equal(result.result.isError,true);assert.ok(!result.result.content[0].text.includes(secret));
+  }
+});
