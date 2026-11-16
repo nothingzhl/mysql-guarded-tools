@@ -2,7 +2,7 @@
 
 ## 当前交付
 
-本地 Git 市场及插件发布候选 `0.7.0-rc.1`；未配置远端、未推送、未创建 GitHub Release、未覆盖当前 0.6.0 安装。
+Git 市场及插件发布候选 `0.7.0-rc.1`，远端为 public 仓库 `nothingzhl/mysql-guarded-tools`。候选源码和同名 tag 可用于审阅与测试；不代表真实钥匙串和 MySQL 验收通过。未覆盖当前 0.6.0 安装。
 
 仓库遵循 `.agents/plugins/marketplace.json` + `plugins/<name>/.codex-plugin/plugin.json` 结构。市场路径相对于仓库根目录，全部使用相对路径。依据：[OpenAI 插件打包与市场文档](https://developers.openai.com/plugins/build/plugins)。这属于 Git 自建市场，不代表进入官方公共目录。
 
@@ -19,10 +19,11 @@
 - [ ] 首次钥匙串授权及旧条目升级；不将现有业务账号当作测试账号。
 - [ ] 浏览器刷新与重新打开窗口验收。
 - [ ] 测试数据库中的只读和受控 UPDATE 集成验收。
-- [ ] 指定 Git 托管目标、可见性和私密安全问题报告入口。
+- [x] Git 托管目标为 GitHub public 仓库 `nothingzhl/mysql-guarded-tools`。
+- [ ] 确认私密安全问题报告入口已启用。
 - [ ] 远端 GitHub Actions 成功；确认维护者姓名、许可证及版本说明。
 
-## 发布步骤（尚未执行）
+## 正式发布步骤（候选源码发布不等于正式验收）
 
 1. 决定远端与 public/private，并建立私密安全问题报告渠道。
 2. 创建空 Git 仓库，添加 remote；先推候选分支供审阅。
@@ -31,7 +32,7 @@
 5. 测试、validate 和 audit 通过后创建对应 tag，并发布源码归档和校验和。
 6. 使用 Git 市场 ref 固定已审查版本；升级时指向新的已验收 tag，不复用旧 tag。
 
-候选发布命令示例：`git tag v0.7.0-rc.1`。这只是说明，不能视为已创建远端 tag 或 Release。
+候选 tag 为 `v0.7.0-rc.1`。本次只发布候选源码和 tag，未创建正式版 GitHub Release。
 
 ## 回退
 

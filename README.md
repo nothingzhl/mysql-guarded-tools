@@ -2,6 +2,8 @@
 
 用于 macOS 本地 Codex 的 MySQL 连接管理插件及 Git 插件市场。当前候选版本：`0.7.0-rc.1`。
 
+**这是发布候选：真实钥匙串、原生密码弹框和 MySQL 集成验收尚未完成。请先在隔离测试环境使用。**
+
 提供真实连接配置窗口、表结构查看、只读查询，以及带 WHERE 和行数审查的 UPDATE。新连接默认禁止 UPDATE；超过 10 行先回滚，再由用户明确确认。INSERT、DELETE 和 DDL 不支持。UPDATE 仅支持可确认无触发器的 InnoDB 单表，别名、JOIN、多目标、视图和非事务表会被拒绝。无法核验触发器元数据权限时也会拒绝；详见 SECURITY.md。
 
 ## 环境
@@ -27,10 +29,10 @@ codex plugin add mysql-readonly-connector@mysql-guarded-tools
 
 ## 从 Git 市场安装
 
-发布仓库后，将下列 `OWNER/REPOSITORY` 换成实际 Git 仓库路径；这不是已经存在的远端地址。
+仓库：[nothingzhl/mysql-guarded-tools](https://github.com/nothingzhl/mysql-guarded-tools)。使用候选版本 tag 固定安装：
 
 ```sh
-codex plugin marketplace add OWNER/REPOSITORY --ref v0.7.0-rc.1
+codex plugin marketplace add nothingzhl/mysql-guarded-tools --ref v0.7.0-rc.1
 codex plugin add mysql-readonly-connector@mysql-guarded-tools
 ```
 

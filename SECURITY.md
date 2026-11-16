@@ -28,4 +28,4 @@ SQL 策略是保守的语法过滤，不是完整 MySQL 解析器，也不构成
 
 ## 报告问题
 
-仓库尚未设置远端或私密报告入口。发布者应在公开分发前配置私密漏洞报告渠道；切勿在公开 Issue 附上密码、完整连接文件、令牌或含业务数据的日志。
+优先通过仓库 [Report a vulnerability](https://github.com/nothingzhl/mysql-guarded-tools/security/advisories/new) 私密报告问题。如果该入口不可用，请勿在公开 Issue 披露可利用细节或敏感数据；可以仅请求维护者提供私密联系渠道。切勿在公开 Issue 附上密码、完整连接文件、令牌或含业务数据的日志。
