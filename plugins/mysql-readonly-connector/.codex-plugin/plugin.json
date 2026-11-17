@@ -1,6 +1,6 @@
 {
   "name": "mysql-readonly-connector",
-  "version": "0.7.0-rc.1",
+  "version": "0.8.0-rc.1",
   "description": "A multi-connection MySQL connector with read queries and transaction-guarded UPDATE review.",
   "author": {
     "name": "Zhang Hanlin"
@@ -17,7 +17,7 @@
   "interface": {
     "displayName": "MySQL Guarded Connector",
     "shortDescription": "Query MySQL and run reviewed, bounded UPDATE operations.",
-    "longDescription": "通过本机配置窗口或 Codex 工具管理真实 MySQL 连接；密码保存在系统钥匙串中。支持只读查询与受控 UPDATE。",
+    "longDescription": "通过本机窗口或 Codex 工具管理 MySQL 连接，密码由环境变量提供。支持只读查询与受控 UPDATE。",
     "developerName": "Zhang Hanlin",
     "category": "Productivity",
     "capabilities": [

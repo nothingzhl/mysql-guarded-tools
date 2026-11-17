@@ -29,7 +29,8 @@
         "MYSQL_QUEUE_TIMEOUT_MS",
         "MYSQL_ACQUIRE_TIMEOUT_MS",
         "MYSQL_MAX_CELL_BYTES",
-        "MYSQL_MAX_RESPONSE_BYTES"
+        "MYSQL_MAX_RESPONSE_BYTES",
+        "MYSQL_PASSWORDS_JSON"
       ],
       "tool_timeout_sec": 120
     }

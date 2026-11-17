@@ -75,6 +75,7 @@ function normalizeProfile(name, input, defaults) {
 
   return {
     ...base,
+    passwordConfigured: input.passwordConfigured !== false,
     connectTimeout: integerValue(input.connectTimeoutMs, defaults.connectTimeout, 1000, 120000, `${name}.connectTimeoutMs`),
     connectionLimit: integerValue(input.connectionLimit, defaults.connectionLimit, 1, 10, `${name}.connectionLimit`),
     allowUpdate: booleanValue(input.allowUpdate, false, `${name}.allowUpdate`),

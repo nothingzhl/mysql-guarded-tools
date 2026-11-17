@@ -1,86 +1,28 @@
-import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import test from "node:test";
-import { ConfigStore } from "../mcp/config-store.mjs";
-
-function fixture(context) {
-  const directory = mkdtempSync(join(tmpdir(), "mysql-config-store-"));
-  const secrets = new Map();
-  const keychain = {
-    get: (name) => secrets.get(name) ?? null,
-    set: (name, password) => secrets.set(name, password),
-    delete: (name) => secrets.delete(name),
-  };
-  const configPath = join(directory, "connections.json");
-  const store = new ConfigStore({ configPath, keychain });
-  context.after(() => rmSync(directory, { recursive: true, force: true }));
-  return { store, configPath, secrets };
-}
-
-test("配置文件不保存密码，密码由钥匙串提供", (context) => {
-  const { store, configPath, secrets } = fixture(context);
-  store.saveConnection("classes", {
-    host: "db.example",
-    port: 3306,
-    user: "reader",
-    password: "top-secret",
-    database: "classes",
-    setDefault: true,
-  });
-  const file = readFileSync(configPath, "utf8");
-  assert.doesNotMatch(file, /top-secret/);
-  assert.equal(secrets.get("classes"), "top-secret");
-  const resolved = store.resolvedProfiles();
-  assert.equal(resolved.profiles.classes.password, "top-secret");
-  assert.equal(resolved.defaultConnection, "classes");
-  assert.equal(resolved.profiles.classes.allowUpdate, false);
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {mkdtempSync,readFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';import {join} from 'node:path';
+import {ConfigStore,defaultConfigPath} from '../mcp/config-store.mjs';
+function fixture(t,env={}){const dir=mkdtempSync(join(tmpdir(),'mysql-env-store-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));return new ConfigStore({configPath:join(dir,'connections.json'),env})}
+const input={host:'db.example',user:'reader',database:'app'};
+test('配置只保存环境引用，密码值不落盘或出现在列表',t=>{
+ const secret='environment-fixture-value';const store=fixture(t,{MYSQL_PASSWORD:secret});store.saveConnection('one',input);
+ assert.ok(!readFileSync(store.configPath,'utf8').includes(secret));assert.ok(!JSON.stringify(store.publicState()).includes(secret));assert.equal(store.resolvedProfiles().profiles.one.password,secret);
 });
-
-test("UPDATE 权限默认关闭且可以按连接保存", (context) => {
-  const { store } = fixture(context);
-  store.saveConnection("analytics", {
-    host: "db.example",
-    user: "operator",
-    password: "secret",
-    database: "analytics",
-    allowUpdate: true,
-  });
-  assert.equal(store.read().connections.analytics.allowUpdate, true);
-  assert.equal(store.publicState().connections[0].allowUpdate, true);
+test('多连接密码从 JSON 名称分别解析',t=>{
+ const store=fixture(t,{MYSQL_PASSWORDS_JSON:JSON.stringify({first:'first-value',second:'second-value'})});
+ for(const [name,key]of [['one','first'],['two','second']])store.saveConnection(name,{...input,passwordSource:'MYSQL_PASSWORDS_JSON',passwordKey:key});
+ assert.equal(store.resolvedProfiles().profiles.one.password,'first-value');assert.equal(store.resolvedProfiles().profiles.two.password,'second-value');
 });
-
-test("编辑时密码留空会保留原密码", (context) => {
-  const { store, secrets } = fixture(context);
-  store.saveConnection("classes", {
-    host: "old.example",
-    user: "reader",
-    password: "secret",
-    database: "classes",
-  });
-  store.saveConnection("classes", {
-    host: "new.example",
-    user: "reader",
-    password: "",
-    database: "classes",
-  });
-  assert.equal(secrets.get("classes"), "secret");
-  assert.equal(store.resolvedProfiles().profiles.classes.host, "new.example");
+test('未设置密码可保存引用，解析结果标明未配置',t=>{
+ const store=fixture(t);store.saveConnection('one',input);assert.equal(store.publicState().connections[0].passwordConfigured,false);assert.equal(store.resolvedProfiles().profiles.one.passwordConfigured,false);
 });
-
-test("删除连接会同时删除钥匙串密码并调整默认连接", (context) => {
-  const { store, secrets } = fixture(context);
-  for (const name of ["classes", "teaching"]) {
-    store.saveConnection(name, {
-      host: "db.example",
-      user: "reader",
-      password: `${name}-secret`,
-      database: name,
-      setDefault: name === "classes",
-    });
-  }
-  store.deleteConnection("classes");
-  assert.equal(secrets.has("classes"), false);
-  assert.equal(store.read().defaultConnection, "teaching");
+test('删除只删除配置，外部环境不受影响',t=>{
+ const env={MYSQL_PASSWORD:'fixture-value'},store=fixture(t,env);store.saveConnection('one',input);store.saveConnection('two',input);store.deleteConnection('one');assert.equal(store.read().defaultConnection,'two');assert.equal(env.MYSQL_PASSWORD,'fixture-value');
+});
+test('旧版无密码引用配置仍能列出，不触碰钥匙串',t=>{
+ const store=fixture(t,{MYSQL_PASSWORD:'fixture-value'});store.write({version:1,defaultConnection:'old',connections:{old:input}});assert.equal(store.publicState().connections[0].passwordSource,'MYSQL_PASSWORD');assert.equal(store.resolvedProfiles().profiles.old.password,'fixture-value');
+});
+test('配置路径在各平台可选择，显式路径优先',()=>{
+ assert.equal(defaultConfigPath({MYSQL_CONFIG_FILE:'/custom/path'},'linux'),'/custom/path');assert.equal(defaultConfigPath({XDG_CONFIG_HOME:'/config'},'linux'),join('/config','mysql-readonly-connector','connections.json'));assert.equal(defaultConfigPath({APPDATA:'/appdata'},'win32'),join('/appdata','mysql-readonly-connector','connections.json'));
 });

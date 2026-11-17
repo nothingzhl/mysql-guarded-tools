@@ -1,6 +1,6 @@
 {
   "name": "mysql-readonly-connector",
-  "version": "0.7.0-rc.1",
+  "version": "0.8.0-rc.1",
   "private": true,
   "type": "module",
   "description": "MySQL MCP server with read queries and reviewed UPDATE operations",

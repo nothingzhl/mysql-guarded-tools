@@ -1,12 +1,1 @@
-import { spawnSync } from 'node:child_process';
-import { mkdirSync, renameSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-if (process.platform !== 'darwin') throw new Error('连接管理要求 macOS；SQL 策略与隔离测试可在其他系统运行。');
-const root = fileURLToPath(new URL('..', import.meta.url));
-mkdirSync(new URL('../build/', import.meta.url), { recursive: true, mode: 0o700 });
-const target = fileURLToPath(new URL('../build/keychain-helper', import.meta.url));
-const temp = `${target}.${process.pid}`;
-const result = spawnSync('/usr/bin/swiftc', ['-O', fileURLToPath(new URL('../native/keychain.swift', import.meta.url)), '-o', temp], {cwd:root, stdio:'inherit'});
-if (result.status !== 0) throw new Error('编译钥匙串组件失败。请先安装 Apple Command Line Tools：xcode-select --install');
-renameSync(temp, target);
-console.error('Keychain helper ready.');
+console.error('密码由环境变量提供，无需原生组件。安装依赖请执行 npm ci --ignore-scripts。');

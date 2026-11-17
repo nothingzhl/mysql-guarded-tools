@@ -183,3 +183,19 @@ test('MCP 保存入口拒绝密码字段和错误类型，不回显值', async c
     assert.equal(result.result.isError,true);assert.ok(!result.result.content[0].text.includes(secret));
   }
 });
+
+test('MCP 环境密码新增/编辑/缺失/删除完整链路不返回密码', async context => {
+  const secret='{{SECRET_x3fdcfhj}}';
+  const server=startServer({MYSQL_PASSWORD:secret,MYSQL_PASSWORDS_JSON:'{"ready":"map-fixture-secret"}'});context.after(()=>server.cleanup());
+  let id=0;const call=async(name,args)=>{
+    const response=await server.request({jsonrpc:'2.0',id:++id,method:'tools/call',params:{name,arguments:args}});
+    assert.ok(!JSON.stringify(response).includes(secret));assert.ok(!JSON.stringify(response).includes('map-fixture-secret'));return response.result;
+  };
+  const base={host:'127.0.0.1',port:1,user:'fixture',database:'fixture'};
+  assert.equal((await call('mysql_save_connection',{...base,name:'configured'})).isError,false);
+  assert.equal((await call('mysql_save_connection',{...base,name:'pending',password_source:'MYSQL_PASSWORDS_JSON',password_key:'not_set'})).isError,false);
+  const missing=await call('mysql_health_check',{connection:'pending'});assert.equal(missing.isError,true);assert.match(missing.content[0].text,/环境变量未配置/);
+  const ready=await call('mysql_health_check',{connection:'configured'});assert.equal(ready.isError,true);assert.ok(!ready.content[0].text.includes('环境变量未配置'));
+  const updated=await call('mysql_save_connection',{name:'configured',password_source:'MYSQL_PASSWORDS_JSON',password_key:'ready'});assert.equal(updated.isError,false);assert.equal(JSON.parse(updated.content[0].text).connection.password_configured,true);
+  const removed=await call('mysql_delete_connection',{name:'pending',confirm:true});assert.equal(JSON.parse(removed.content[0].text).environment_unchanged,true);
+});

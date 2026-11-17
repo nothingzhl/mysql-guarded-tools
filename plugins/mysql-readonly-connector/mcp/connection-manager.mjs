@@ -1,3 +1,4 @@
+import { environmentPassword } from "./environment-passwords.mjs";
 import { normalizeConnection } from "./config-store.mjs";
 
 function optional(value, fallback) {
@@ -17,6 +18,8 @@ function publicConnection(name, connection, passwordConfigured) {
     ssl_reject_unauthorized: connection.sslRejectUnauthorized,
     allow_update: connection.allowUpdate,
     password_configured: passwordConfigured,
+    password_source: connection.passwordSource ?? "MYSQL_PASSWORD",
+    password_key: connection.passwordKey ?? name,
   };
 }
 
@@ -37,17 +40,12 @@ export async function saveManagedConnection(options) {
   return options.store.withLock(() => saveUnlocked(options));
 }
 
-async function saveUnlocked({ store, args, promptPassword, onChanged }) {
+async function saveUnlocked({ store, args, onChanged }) {
+  if (Object.hasOwn(args,'password') || Object.hasOwn(args,'change_password') || Object.hasOwn(args,'copy_password_from')) {
+    throw new Error('密码由环境变量提供；不支持密码值、换密弹窗或钥匙串复制参数。');
+  }
   const config = store.read();
-  const existing = config.connections[args.name];
-  const copyPasswordFrom = args.copy_password_from;
-  if (copyPasswordFrom && args.change_password === true) {
-    throw new Error("copy_password_from 和 change_password 不能同时使用。");
-  }
-  if (copyPasswordFrom === args.name) {
-    throw new Error("不能从连接自身复制密码。");
-  }
-  const passwordRequired = (!existing || args.change_password === true) && !copyPasswordFrom;
+  const existing = Object.hasOwn(config.connections,args.name) ? config.connections[args.name] : undefined;
   const input = {
     host: optional(args.host, existing?.host),
     port: optional(args.port, existing?.port),
@@ -62,24 +60,12 @@ async function saveUnlocked({ store, args, promptPassword, onChanged }) {
     ),
     allowUpdate: optional(args.allow_update, existing?.allowUpdate),
     setDefault: args.set_default === true,
-    password: "",
+    passwordSource: optional(args.password_source, existing?.passwordSource),
+    passwordKey: optional(args.password_key, existing?.passwordKey),
   };
 
   const normalized = normalizeConnection(args.name, input);
-  if (copyPasswordFrom) {
-    const source = config.connections[copyPasswordFrom];
-    if (!source) throw new Error(`来源连接 ${copyPasswordFrom} 不存在。`);
-    const mismatchedFields = ["host", "port", "user"].filter(
-      (field) => source[field] !== normalized[field],
-    );
-    if (mismatchedFields.length > 0) {
-      throw new Error("只有主机、端口和用户名完全一致的连接才能复制密码。");
-    }
-    input.password = store.copyPassword(copyPasswordFrom, args.name);
-  } else if (passwordRequired) {
-    input.password = await promptPassword(args.name);
-  }
-
+  const configured = environmentPassword(args.name, normalized, store.env) !== null;
   const saved = store.saveConnection(args.name, input);
   let runtimeWarning;
   try { await onChanged(args.name); }
@@ -88,15 +74,10 @@ async function saveUnlocked({ store, args, promptPassword, onChanged }) {
   return {
     runtime_warning: runtimeWarning,
     action: existing ? "updated" : "created",
-    connection: publicConnection(args.name, saved, true),
+    connection: publicConnection(args.name, saved, configured),
     default_connection: updatedConfig.defaultConnection,
-    password_action: copyPasswordFrom
-      ? "copied_from_keychain"
-      : passwordRequired
-        ? "stored_in_keychain"
-        : "kept_existing",
-    password_source: copyPasswordFrom ?? undefined,
-    next_step: "可以调用 mysql_health_check 测试该连接。",
+    password_action: "environment_reference_saved",
+    next_step: configured ? "可以调用 mysql_health_check 测试该连接。" : "请设置密码环境变量并重启 Codex，再检查连接。",
   };
 }
 
@@ -109,7 +90,7 @@ async function deleteUnlocked({ store, name, onChanged }) {
   return {
     deleted: name,
     default_connection: store.read().defaultConnection,
-    password_deleted_from_keychain: true,
+    environment_unchanged: true,
   };
 }
 

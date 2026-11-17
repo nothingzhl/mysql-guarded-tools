@@ -12,7 +12,6 @@ import {
   setManagedDefaultConnection,
 } from "./connection-manager.mjs";
 import { runGuardedUpdateTransaction } from "./guarded-update.mjs";
-import { promptForPassword } from "./native-password.mjs";
 import {
   integerFromEnv,
   loadConnectionRegistry,
@@ -26,7 +25,7 @@ import {
 } from "./update-review.mjs";
 
 const SERVER_NAME = "mysql-readonly-connector";
-const SERVER_VERSION = "0.7.0-rc.1";
+const SERVER_VERSION = "0.8.0-rc.1";
 const DEFAULT_PROTOCOL_VERSION = "2024-11-05";
 const ABSOLUTE_MAX_ROWS = 5000;
 const ABSOLUTE_MAX_TIMEOUT_MS = 120000;
@@ -135,7 +134,8 @@ function defaultQueryTimeout() {
 function getPool(connectionName) {
   if (pools.has(connectionName)) return pools.get(connectionName);
   const profile = getRegistry().profiles.get(connectionName);
-  const { allowUpdate: _allowUpdate, ...connectionConfig } = profile;
+  if (profile.passwordConfigured === false) throw new Error(`连接 ${connectionName} 的密码环境变量未配置，请设置后重启插件。`);
+  const { allowUpdate: _allowUpdate, passwordConfigured: _passwordConfigured, passwordSource: _source, passwordKey: _key, ...connectionConfig } = profile;
   const pool = mysql.createPool({
     ...connectionConfig,
     waitForConnections: true,
@@ -409,7 +409,7 @@ const tools = [
   },
   {
     name: "mysql_save_connection",
-    description: "新增或局部修改一个本机管理的 MySQL 连接。可从同主机、端口和用户名的已有连接复制钥匙串密码；否则新增连接或 change_password=true 时弹出 macOS 隐藏密码框。密码不经过 Codex 对话。",
+    description: "新增或编辑连接；密码只从 MYSQL_PASSWORD 或 MYSQL_PASSWORDS_JSON 环境变量读取，工具仅保存来源和名称。",
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -428,22 +428,15 @@ const tools = [
           description: "是否允许受控 UPDATE。默认关闭。",
         },
         set_default: { type: "boolean", description: "保存后设为默认连接。" },
-        change_password: {
-          type: "boolean",
-          description: "编辑连接时是否弹出密码框更换密码。新增连接无论该值如何都会弹窗。",
-        },
-        copy_password_from: {
-          type: "string",
-          pattern: "^[A-Za-z0-9_-]{1,64}$",
-          description: "从已有连接复制钥匙串密码。仅允许来源与目标的主机、端口和用户名完全一致；不能与 change_password 同时使用。",
-        },
+        password_source: { type: "string", enum: ["MYSQL_PASSWORD", "MYSQL_PASSWORDS_JSON"], description: "密码环境变量来源；默认 MYSQL_PASSWORD。" },
+        password_key: { type: "string", pattern: "^[A-Za-z0-9_-]{1,64}$", description: "MYSQL_PASSWORDS_JSON 中的名称；默认连接名。" },
       },
       required: ["name"],
     },
   },
   {
     name: "mysql_delete_connection",
-    description: "删除一个本机管理的连接及其 macOS 钥匙串密码。必须在用户明确要求删除后调用。",
+    description: "删除连接配置，不修改环境变量。必须在用户明确要求删除后调用。",
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -547,6 +540,7 @@ async function callTool(name, args = {}) {
     const value = args[key];
     if (field.type === "integer" && (!Number.isInteger(value) || value < field.minimum || value > field.maximum)) throw new Error("整数参数超出范围。");
     if (["string", "boolean"].includes(field.type) && typeof value !== field.type) throw new Error("参数类型不正确。");
+    if (field.enum && !field.enum.includes(value)) throw new Error("参数不在允许范围内。");
     if (field.pattern && !new RegExp(field.pattern).test(value)) throw new Error("参数格式不正确。");
     if (field.type === "array" && !Array.isArray(value)) throw new Error("参数必须为数组。");
   }
@@ -561,7 +555,6 @@ async function callTool(name, args = {}) {
     return saveManagedConnection({
       store: getConfigStore(),
       args,
-      promptPassword: promptManagedPassword,
       onChanged: reloadManagedConnections,
     });
   }
@@ -670,9 +663,6 @@ function writeMessage(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
 }
 
-function promptManagedPassword(connectionName) {
-  return promptForPassword(connectionName);
-}
 
 function success(id, result) {
   writeMessage({ jsonrpc: "2.0", id, result });
@@ -693,7 +683,7 @@ async function handleRequest(message) {
       protocolVersion: params.protocolVersion ?? DEFAULT_PROTOCOL_VERSION,
       capabilities: { tools: { listChanged: false } },
       serverInfo: { name: SERVER_NAME, version: SERVER_VERSION },
-      instructions: "多连接 MySQL 安全连接器。查询默认只读；UPDATE 必须在连接配置中显式启用，且超过 10 条时需要用户审查确认。密码使用 macOS 原生隐藏输入框，或从同账号连接复制钥匙串密码。",
+      instructions: "多连接 MySQL 安全连接器。查询默认只读；UPDATE 必须在连接配置中显式启用，且超过 10 条时需要用户审查确认。密码从 MYSQL_PASSWORD 或 MYSQL_PASSWORDS_JSON 环境变量读取；修改环境变量后确保 Codex 宿主重新继承变量并重启。",
     });
     return;
   }

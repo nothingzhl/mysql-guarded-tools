@@ -17,8 +17,6 @@ jobs:
           cache: npm
           cache-dependency-path: plugins/mysql-readonly-connector/package-lock.json
       - run: npm ci --ignore-scripts --prefix plugins/mysql-readonly-connector
-      - if: runner.os == 'macOS'
-        run: npm run setup --prefix plugins/mysql-readonly-connector
       - run: npm test
       - run: npm run validate
       - run: npm run audit

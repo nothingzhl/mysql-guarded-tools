@@ -26,7 +26,7 @@ export function createConfigWindow({ callTool, htmlUrl = new URL('../ui/config.h
       for await (const chunk of req) { body+=chunk; if(Buffer.byteLength(body)>16384) return send(res,413,{error:'请求过大'}); }
       const { tool, args = {} } = JSON.parse(body);
       if (!allowed.has(tool)) return send(res,403,{error:'配置窗口不支持此操作'});
-      if (!args || typeof args !== 'object' || Array.isArray(args) || Object.keys(args).some(k=>/password/i.test(k)&&!['change_password','copy_password_from'].includes(k))) return send(res,400,{error:'不得通过窗口传递密码'});
+      if (!args || typeof args !== 'object' || Array.isArray(args) || Object.keys(args).some(k=>/password/i.test(k)&&!['password_source','password_key'].includes(k))) return send(res,400,{error:'不得通过窗口传递密码'});
       const modifying=['mysql_save_connection','mysql_delete_connection','mysql_set_default_connection'].includes(tool);
       if (modifying && mutation) return send(res,409,{error:'另一项配置操作尚未完成，请稍后重试'});
       if(modifying) mutation=true;

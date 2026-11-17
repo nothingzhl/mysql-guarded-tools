@@ -1,6 +1,5 @@
-import { systemKeychain } from "./keychain.mjs";
+import { environmentPassword, normalizePasswordReference } from "./environment-passwords.mjs";
 import { randomUUID } from "node:crypto";
-export { systemKeychain } from "./keychain.mjs";
 import {
   chmodSync,
   openSync,
@@ -17,12 +16,14 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
 const CONFIG_VERSION = 1;
-const KEYCHAIN_SERVICE = "mysql-readonly-connector";
 const CONNECTION_NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 
-export function defaultConfigPath(env = process.env) {
-  return env.MYSQL_CONFIG_FILE
-    || join(homedir(), "Library", "Application Support", "mysql-readonly-connector", "connections.json");
+export function defaultConfigPath(env = process.env, platform = process.platform) {
+  if (env.MYSQL_CONFIG_FILE) return env.MYSQL_CONFIG_FILE;
+  const directory = platform === 'darwin' ? join(homedir(), 'Library', 'Application Support')
+    : platform === 'win32' ? (env.APPDATA || join(homedir(), 'AppData', 'Roaming'))
+    : (env.XDG_CONFIG_HOME || join(homedir(), '.config'));
+  return join(directory, 'mysql-readonly-connector', 'connections.json');
 }
 
 function emptyConfig() {
@@ -62,6 +63,7 @@ export function normalizeConnection(name, input) {
     ssl: booleanValue(input.ssl, false),
     sslRejectUnauthorized: booleanValue(input.sslRejectUnauthorized, true),
     allowUpdate: booleanValue(input.allowUpdate, false),
+    ...normalizePasswordReference(name, input),
   };
   const missing = ["host", "user", "database"].filter((field) => !connection[field]);
   if (missing.length > 0) {
@@ -71,9 +73,9 @@ export function normalizeConnection(name, input) {
 }
 
 export class ConfigStore {
-  constructor({ configPath = defaultConfigPath(), keychain = systemKeychain } = {}) {
+  constructor({ configPath = defaultConfigPath(), env = process.env } = {}) {
     this.configPath = configPath;
-    this.keychain = keychain;
+    this.env = env;
   }
 
   exists() {
@@ -88,7 +90,7 @@ export class ConfigStore {
     } catch {
       throw new Error("MySQL 插件配置文件不是有效的 JSON。");
     }
-    if (config?.version !== CONFIG_VERSION || !config.connections || typeof config.connections !== "object") {
+    if (config?.version !== CONFIG_VERSION || !config.connections || typeof config.connections !== "object" || Array.isArray(config.connections)) {
       throw new Error("MySQL 插件配置文件版本或结构不受支持。");
     }
     return {
@@ -133,69 +135,36 @@ export class ConfigStore {
       connections: Object.entries(config.connections).map(([name, connection]) => ({
         name,
         ...connection,
-        passwordConfigured: this.keychain.has ? this.keychain.has(name) : this.keychain.get(name) !== null,
+        ...normalizePasswordReference(name, connection),
+        passwordConfigured: environmentPassword(name, connection, this.env) !== null,
       })),
     };
-  }
-
-  copyPassword(sourceName, targetName) {
-    const config = this.read();
-    if (!config.connections[sourceName]) {
-      throw new Error(`来源连接 ${sourceName} 不存在。`);
-    }
-    const password = this.keychain.get(sourceName);
-    if (password === null) {
-      throw new Error(`来源连接 ${sourceName} 在 macOS 钥匙串中没有密码。`);
-    }
-    return password;
   }
 
   saveConnection(name, input) {
     const normalized = normalizeConnection(name, input);
     const config = this.read();
-    const existingPassword = this.keychain.get(name);
-    if (input.password) {
-      this.keychain.set(name, input.password);
-    } else if (existingPassword === null) {
-      throw new Error(`连接 ${name} 尚未配置密码。`);
-    }
     config.connections[name] = normalized;
     if (input.setDefault === true || !config.defaultConnection) {
       config.defaultConnection = name;
     }
-    try { this.write(config); }
-    catch (error) {
-      if (input.password) {
-        try {
-          if (existingPassword === null) this.keychain.delete(name);
-          else this.keychain.set(name, existingPassword);
-        } catch { throw new Error("配置保存失败且钥匙串回滚失败，请手动核对配置和密码；不要盲目重试。"); }
-      }
-      throw error;
-    }
+    this.write(config);
     return normalized;
   }
 
   deleteConnection(name) {
     const config = this.read();
-    if (!config.connections[name]) throw new Error(`连接 ${name} 不存在。`);
+    if (!Object.hasOwn(config.connections, name)) throw new Error(`连接 ${name} 不存在。`);
     delete config.connections[name];
     if (config.defaultConnection === name) {
       config.defaultConnection = Object.keys(config.connections)[0] ?? null;
     }
-    const previousPassword = this.keychain.get(name);
-    this.keychain.delete(name);
-    try { this.write(config); }
-    catch (error) {
-      try { if (previousPassword !== null) this.keychain.set(name, previousPassword); }
-      catch { throw new Error("删除失败且钥匙串回滚失败，请手动核对该连接。"); }
-      throw error;
-    }
+    this.write(config);
   }
 
   setDefault(name) {
     const config = this.read();
-    if (name !== null && !config.connections[name]) throw new Error(`连接 ${name} 不存在。`);
+    if (name !== null && !Object.hasOwn(config.connections, name)) throw new Error(`连接 ${name} 不存在。`);
     config.defaultConnection = name;
     this.write(config);
   }
@@ -204,9 +173,8 @@ export class ConfigStore {
     const config = this.read();
     const profiles = {};
     for (const [name, connection] of Object.entries(config.connections)) {
-      const password = this.keychain.get(name);
-      if (password === null) throw new Error(`连接 ${name} 在 macOS 钥匙串中没有密码。`);
-      profiles[name] = { ...connection, password };
+      const password = environmentPassword(name, connection, this.env);
+      profiles[name] = { ...connection, password: password ?? "", passwordConfigured: password !== null };
     }
     return { profiles, defaultConnection: config.defaultConnection };
   }
@@ -217,7 +185,7 @@ export class ConfigStore {
 }
 
 export function readManagedProfiles(env = process.env, options = {}) {
-  const store = options.store ?? new ConfigStore({ configPath: defaultConfigPath(env) });
+  const store = options.store ?? new ConfigStore({ configPath: defaultConfigPath(env), env });
   if (!store.exists()) return null;
   return store.resolvedProfiles();
 }
