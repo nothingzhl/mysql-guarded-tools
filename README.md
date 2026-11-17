@@ -25,6 +25,16 @@ codex plugin marketplace add nothingzhl/mysql-guarded-tools --ref feature/enviro
 codex plugin add mysql-readonly-connector@mysql-guarded-tools
 ```
 
+如果已经登记过 mysql-guarded-tools 且固定在旧 tag，直接 add 会报来源不同。切换 ref 请先重新登记（不删除用户连接配置或钥匙串）：
+
+```sh
+codex plugin marketplace remove mysql-guarded-tools
+codex plugin marketplace add nothingzhl/mysql-guarded-tools --ref feature/environment-passwords
+codex plugin add mysql-readonly-connector@mysql-guarded-tools
+```
+
+安装后完全退出并重新启动 Codex，避免聊天继续使用旧 MCP 进程。确认版本可运行 `codex plugin list --marketplace mysql-guarded-tools --json`，应显示 0.8.0-rc.1。
+
 开发分支会随后续提交变化，正式使用前应固定到验收通过的 tag 或 Git commit。
 
 ## 密码环境变量
