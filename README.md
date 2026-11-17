@@ -18,7 +18,14 @@ codex plugin add mysql-readonly-connector@mysql-guarded-tools
 
 启动器首次运行需要网络安装锁定的 npm 依赖；离线安装前请手动准备依赖。没有 Swift 或 Apple Command Line Tools 要求。
 
-GitHub 仓库：[nothingzhl/mysql-guarded-tools](https://github.com/nothingzhl/mysql-guarded-tools)。当前已经发布的 `v0.7.0-rc.1` 仍使用钥匙串；不要把它当成环境变量版。环境变量版尚未发布新 tag，安装当前本地代码请使用上面的本地市场步骤。
+GitHub 仓库：[nothingzhl/mysql-guarded-tools](https://github.com/nothingzhl/mysql-guarded-tools)。当前已经发布的 `v0.7.0-rc.1` 仍使用钥匙串；不要把它当成环境变量版。环境变量版位于开发分支 feature/environment-passwords，尚未发布新 tag。可以按上面的本地市场步骤安装，或使用开发分支：
+
+```sh
+codex plugin marketplace add nothingzhl/mysql-guarded-tools --ref feature/environment-passwords
+codex plugin add mysql-readonly-connector@mysql-guarded-tools
+```
+
+开发分支会随后续提交变化，正式使用前应固定到验收通过的 tag 或 Git commit。
 
 ## 密码环境变量
 

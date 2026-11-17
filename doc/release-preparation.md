@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-本地环境变量版本，开发分支 feature/environment-passwords。尚未推送该版本或创建新 tag，不应把已经公开的 v0.7.0-rc.1 当作环境变量版。
+环境变量版本位于 GitHub 开发分支 feature/environment-passwords。尚未创建新 tag，不应把已经公开的 v0.7.0-rc.1 当作环境变量版。
 
 ## 变更验收
 

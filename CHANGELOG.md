@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8.0-rc.1 — 环境变量密码（本地候选）
+## 0.8.0-rc.1 — 环境变量密码（开发候选）
 
 - 使用 MYSQL_PASSWORD 或 MYSQL_PASSWORDS_JSON；配置仅保存来源与名称。
 - 移除 Keychain、Swift、原生密码输入和复制条目流程；旧密码不自动迁移或删除。
